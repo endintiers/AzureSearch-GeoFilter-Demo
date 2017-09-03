@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26730.10
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WildMouse.Unearth.GeoFilterLoadApp", "WildMouse.Unearth.GeoFilterLoadApp\WildMouse.Unearth.GeoFilterLoadApp.csproj", "{931252A6-54B8-4D55-973A-256A664ACFFD}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Wildmouse.Unearth.GeoFilterDemoUI", "Wildmouse.Unearth.GeoFilterDemoUI\Wildmouse.Unearth.GeoFilterDemoUI.csproj", "{CF52BFF2-F3E3-4EB3-9980-BCF61D0041DD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{931252A6-54B8-4D55-973A-256A664ACFFD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{931252A6-54B8-4D55-973A-256A664ACFFD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{931252A6-54B8-4D55-973A-256A664ACFFD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{931252A6-54B8-4D55-973A-256A664ACFFD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CF52BFF2-F3E3-4EB3-9980-BCF61D0041DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CF52BFF2-F3E3-4EB3-9980-BCF61D0041DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CF52BFF2-F3E3-4EB3-9980-BCF61D0041DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CF52BFF2-F3E3-4EB3-9980-BCF61D0041DD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3CF3B588-9F83-42FB-8529-22F479468898}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,313 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "O and L Home";
+}
+
+@*
+    Model is unused. We interact with SearchController via AJAX API calls. 
+    This is because the Map Load is slow so we don't want to use postbacks, but still
+    want to pass the query and filter to C# code to call Search via the client library.
+
+    Since the interface to Azure Search is actually REST we could just call it from
+    inside this page directly - but then this would only be a JavaScript demo...
+*@
+
+<div class="container">
+
+    <div class="row">
+        <div class="col-lg-4 col-sm-4">
+            <br />
+            <input type="text" id="queryText"
+                   class="form-control"
+                   autocomplete="off"
+                   placeholder="Search text or just leave this and use the filter only">
+            <br />
+            <div id="results">
+            </div>
+        </div>
+
+        <div class="col-lg-8 col-sm-8">
+            <br />
+            <div class="input-group">
+                <span class="input-group-addon" style="padding-left: 4px; padding-right: 4px;">Filter:</span>
+                <input type="text" id="filterText"
+                       class="form-control"
+                       autocomplete="off"
+                       placeholder="Draw a polygon (area) or place a point (push-pin) on the map, then click Search">
+                <span class="input-group-btn">
+                    <button id="queryButton" class="btn btn-primary"
+                            data-loading-text="Searching..."
+                            data-animation="" type="submit"
+                            onclick="Search();">
+                        Search
+                    </button>
+                </span>
+            </div>
+            <br />
+            <div style="width:100%; height:500px;">
+                <div id='myMap'></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row hidden" id="msg-row">
+        <div class="col-lg-12 col-sm-12">
+            <span id="msg" class="text-danger"></span>
+        </div>
+    </div>
+
+
+</div>
+
+        @section scripts
+            {
+
+            <script>
+
+                // Initialise the page (Maps not ready yet)
+                $('document').ready(function () {
+
+                    // Execute search if user clicks enter in either textbox
+                    $("#filterText").keyup(function (event) {
+                        if (event.keyCode == 13) {
+                            Search();
+                        }
+                    });
+                    $("#queryText").keyup(function (event) {
+                        if (event.keyCode == 13) {
+                            Search();
+                        }
+                    });
+
+                    // Do the initial search to populate the page
+                    Search();
+
+                });
+
+                // Ask the Web API to perform a search for us
+                function Search() {
+
+                    var searchParameters = {};
+                    searchParameters.queryText = $("#queryText").val();
+                    searchParameters.filterText = $("#filterText").val();
+
+                    var options = {};
+                    options.url = "/api/search";
+                    options.type = "POST";
+                    options.data = JSON.stringify(searchParameters);
+                    options.contentType = "application/json";
+                    options.dataType = "html";
+
+                    options.success = function (searchResult) {
+                        if (searchResult == null) {
+                            ErrorMessage('Error calling API - no result returned');
+                            return;
+                        }
+                        var sr = JSON.parse(searchResult);
+                        if (sr.msg != null) {
+                            ErrorMessage(sr.msg);
+                        }
+                        else {
+                            Display(sr.verses);
+                        }
+                    };
+
+                    options.error = function () {
+                        ErrorMessage("Error while calling the Web API");
+                    };
+
+                    // Make the call...
+                    $.ajax(options);
+                }
+
+                function ErrorMessage(msg) {
+                    $("#msg").html("<b>" + msg + "</b>");
+                    $("#queryButton").button('reset');
+                    $("#msg-row").removeClass('hidden');
+                    setTimeout(function () {
+                        $("#msg-row").addClass('hidden');
+                    }, 3000);
+                }
+
+                function Display(verses) {
+                    filterMap.entities.clear();
+                    if (verses != null && verses.length > 0)
+                    {
+                        var html = '';
+                        html += '<table class="table table-condensed table-striped">';
+                        html += '<tbody>';
+                        for (i = 0; i < verses.length; i++) {
+                            var verse = verses[i];
+                            html += '<tr id="verse-' + verse.documentId + '">';
+                            html += '<td class="verse" title="' + verse.churchName + '">';
+                            if (verse.highlight != null) {
+                                html += verse.highlight;
+                            }
+                            else {
+                                html += verse.text;
+                            }
+                            html += '</td></tr>';
+                            AddPushPin(verse);
+                        }
+                        html += '</tbody></table>';
+                        $("#results").html(html);
+                    }
+                }
+
+                function AddPushPin(verse) {
+                    var pushpin = new Microsoft.Maps.Pushpin(
+                        new Microsoft.Maps.Location(verse.geoPoint.latitude, verse.geoPoint.longitude),
+                        {
+                            //title: verse.pointName,
+                            text: verse.documentId
+                        });
+                    Microsoft.Maps.Events.addHandler(pushpin, 'mouseover', function (e) {
+                        var verseId = 'verse-' + e.target.entity.iconText;
+                        $('#' + verseId).addClass('highlight').siblings().removeClass('highlight');
+                    });
+                    Microsoft.Maps.Events.addHandler(pushpin, 'mouseout', function (e) {
+                        var verseId = 'verse-' + e.target.entity.iconText;
+                        $('#' + verseId).removeClass('highlight');
+                    });
+                    filterMap.entities.push(pushpin);
+                }               
+
+            </script>
+
+            <script>
+
+        // Crazy Bing Maps code that I plan to tidy up later when I know what I'm doing
+        // It works but if you value your sanity, just ignore it...
+
+        // Page global variables
+        var filterMap;
+        var geoPoints;
+        var drawingManager;
+
+        // Called async once Bing Maps is loaded on the page
+        function loadMapScenario() {
+            filterMap = new Microsoft.Maps.Map(document.getElementById('myMap'), {
+                // TODO: Use your Bing Maps Credential Here
+                credentials: 'AnjwY5Xqucct1HbKs82fHV_WI-FI2zKy4Z82wA0OBOUkEm-7MZ1NSCySNEikvhUJ',
+                center: new Microsoft.Maps.Location(51.516, -0.0865),
+                mapTypeId: Microsoft.Maps.MapTypeId.road,
+                zoom: 13, enableClickableLogo: false, showCopyright: false
+            });
+
+                if (geoPoints != null) {
+                    filterMap.entities.clear();
+                    for (var i = 0; i < geoPoints.length; i++) {
+                        var pushpin = new Microsoft.Maps.Pushpin(
+                            new Microsoft.Maps.Location(geoPoints[i].latitude, geoPoints[i].longitude),
+                            {
+                                //title: geoPoints[i].pointName,
+                                text: geoPoints[i].id
+                            });
+                        geoPoints[i].pushpin = pushpin;
+                        Microsoft.Maps.Events.addHandler(pushpin, 'mouseover', function (e) {
+                            var verseId = 'verse-' + e.target.entity.iconText;
+                            $('#' + verseId).addClass('highlight').siblings().removeClass('highlight');
+                        });
+                        Microsoft.Maps.Events.addHandler(pushpin, 'mouseout', function (e) {
+                            var verseId = 'verse-' + e.target.entity.iconText;
+                            $('#' + verseId).removeClass('highlight');
+                        });
+                        filterMap.entities.push(pushpin);
+                    }
+                }
+
+            //Load the DrawingTools module
+            Microsoft.Maps.loadModule('Microsoft.Maps.DrawingTools', function () {
+                //Create an instance of the DrawingTools class and bind it to the map.
+                var tools = new Microsoft.Maps.DrawingTools(filterMap);
+
+                //Show the drawing toolbar and enable editing on the map.
+                tools.showDrawingManager(function (manager) {
+                    //Store a reference to the drawing manager as it will be useful later.
+                    drawingManager = manager;
+                    //Add events to the drawing manager.
+                    Microsoft.Maps.Events.addHandler(manager, 'drawingChanged', function (e) {
+                        mapDrawingChanged(e);
+                    });
+                    Microsoft.Maps.Events.addHandler(manager, 'drawingEnded', function (e) {
+                        mapDrawingEnded();
+                    });
+                });
+            });
+        }
+
+        function mapDrawingChanged(e) {
+            if (e.geometryType == 3) {
+                // In the process of drawing a polygon
+                var mfText = document.getElementById('filterText');
+                var vertices = e.geometry.rings;
+                mfText.value = "geo.intersects(geoPoint, geography'"; // Odata
+                mfText.value += "POLYGON((";
+                var latLons = vertices.map(function (vertice) {
+                    return xyStr(vertice);
+                });
+                mfText.value += latLons.join(", ");
+                mfText.value += "))";
+                mfText.value += "')"; // Odata
+            }
+        }
+
+        function mapDrawingEnded() {
+            var mfText = document.getElementById('filterText');
+            drawnShapes = drawingManager.getPrimitives();
+            var numShapes = drawnShapes.length;
+            var mostRecent = drawnShapes[numShapes - 1];
+            if (mostRecent != null) {
+                var isPoly = mostRecent instanceof Microsoft.Maps.Polygon;
+                var isPoint = mostRecent instanceof Microsoft.Maps.Pushpin;
+                mfText.value = "";
+                if (isPoly) {
+                    var vertices = mostRecent.getLocations();
+                    mfText.value = "geo.intersects(geoPoint, geography'";
+                    mfText.value += "POLYGON((";
+                    var latLons = vertices.map(function (vertice) {
+                        return latLonStr(vertice);
+                    });
+                    mfText.value += latLons.join(", ");
+                    mfText.value += "))";
+                    mfText.value += "')";
+                }
+                if (isPoint) {
+                    mfText.value = "geo.distance(geoPoint, geography'";
+                    mfText.value += "POINT(";
+                    mfText.value += mostRecent.geometry.x.toFixed(2) + " " + mostRecent.geometry.y.toFixed(2);
+                    mfText.value += ")";
+                    mfText.value += "') le 1";
+                }
+                // Get rid of any previous shapes
+                for (i = 0; i < drawnShapes.length; i++) {
+                    var theShape = drawnShapes[i];
+                }
+            }
+        }
+
+        function latLonStr(loc) {
+            var s = Number(loc.longitude).toFixed(4) + " " +
+                Number(loc.latitude).toFixed(4);
+            return s;
+        }
+
+        function xyStr(loc) {
+            var s = '';
+            for (i = 0; i < loc.x.length; i++) {
+                s += Number(loc.x[i]).toFixed(4) + " " + Number(loc.y[i]).toFixed(4);
+                if (i < loc.x.length - 1) {
+                    s += ", ";
+                }
+            }
+            return s;
+        }
+
+
+            </script>
+
+            @*Map load script should be last on page*@
+            <script type='text/javascript' src='https://www.bing.com/api/maps/mapcontrol?callback=loadMapScenario' async defer></script>
+
+        }
