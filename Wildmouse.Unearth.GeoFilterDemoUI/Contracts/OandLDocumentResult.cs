@@ -8,7 +8,7 @@ using System.Text;
 
 namespace Wildmouse.Unearth.GeoFilterDemoUI.Contracts
 {
-    public class OandLDocument
+    public class OandLDocumentResult
     {
         public string documentId { get; set; }
 

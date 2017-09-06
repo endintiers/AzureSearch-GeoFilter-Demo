@@ -24,9 +24,9 @@ table td {
 
 /* adding nth-child to boost specificity - its a thing */ 
 .table-striped tbody tr.highlight:nth-child(odd) td {
-    background-color: palegreen;
+    background-color: darkorange;
 }
 .table-striped tbody tr.highlight:nth-child(even) td {
-    background-color: palegreen;
+    background-color: gold;
 }
 

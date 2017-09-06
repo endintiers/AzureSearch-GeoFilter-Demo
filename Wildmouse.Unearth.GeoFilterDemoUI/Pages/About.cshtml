@@ -8,6 +8,73 @@
         <div class="col-lg-7 col-sm-6">
             <div class="clearfix"></div>
             <h2>@ViewData["Title"]</h2>
+            <p>
+                Sometimes words are associated with a place. Our <a target="_blank" href="http://unearth.ai">Unearth</a> Cognitive Search product,
+                which is built on top of <a target="_blank" href="https://azure.microsoft.com/en-us/services/search/">Azure Search</a>
+                recognises this and uses Azure Search geo-spatial filter functions to add a geographical dimension.
+            </p>
+            <p>
+                This demo is intended to help other developers who want to implement geo-filtering in Azure Search to understand
+                how geo-spatial filter functions are formatted and how they are used.
+                You can find <a target="_blank" href="https://github.com/endintiers/AzureSearch-GeoFilter-Demo">
+                the source code for this demo and the code that created the underlying index in github</a>.
+                Comments, corrections and questions are welcome there. This is an ASP.NET Core 2 application using
+                Razor Pages (sparingly) - its pretty much JavaScript all the way down - that also provides
+                (and uses) a Web API.
+            </p>
+            <p>
+                With Azure Search you can <a target="_blank" href="https://docs.microsoft.com/en-us/azure/search/search-query-overview">
+                either Search or Filter, or Search <b>and</b> Filter at the same time</a>. The demo lets you try
+                all these options on a <small>very small</small> index.
+                The only filterable field in the oranges-and-lemons index is 'geoPoint' (where the church is) - a GeographyPoint field.
+                The only searchable field is 'text' (the verse that refers to this church).
+            </p>
+            <h3>geo.distance</h3>
+            <p>
+                This allows you to specify a geographical POINT, a comparison operator and a distance.
+                At the top of the map is a drawing toolbar. Click on the first icon (the push-pin) and click
+                on a place on the map. A filter clause should appear in the filter box above the map like:
+            </p>
+            <p><i>geo.distance(geoPoint, geography'POINT(-0.09 51.52)') le 1</i></p>
+            <p>
+                <b>geoPoint</b> is the name of the filterable geography field in the index, <b>'POINT ...'</b> is part of the
+                Well-Known Text that describes this point (the only part we care about for now), <b>le</b> is the comparison
+                operator we will use (less than or equal to) and <b>1</b> is the distance. This clause will limit the search
+                to documents where geoPoint describes a location within 1km of POINT (filters are applied before searching).
+                If you like you can try a different comparison operator (<b>ge</b> makes sense) or distance by editing the
+                filter text directly and hitting the Search button.
+            </p>
+            <h3>geo.intersects</h3>
+            <p>
+                intersects allows you to define a geographical POLYGON. Click on the 3rd icon in the map toolbar (area) then
+                click on multiple points to define the area. Double-click to complete the area polygon. You can edit the polygon
+                by clicking and dragging points on the map or clicking and dragging 'half points' to make a more complex polygon.
+                A filter clause should appear in the filter box above the map like:
+            </p>
+            <p><i>geo.intersects(geoPoint, geography'POLYGON((-0.1431 51.5240, -0.0970 51.5240, -0.0942 51.4974, -0.1442 51.4973, -0.1431 51.5240))')</i></p>
+            <p>
+                <b>geoPoint</b> we know, <b>POLYGON</b> is how we describe an area and there are no other parameters. Hit the Search button
+                to see the filter in action.
+            </p>
+            <div>&nbsp;</div>
+            <p>
+                Nothing* stops you from using multiple filters, so if you want to you can directly edit the filter text
+                to do both a geo.distance and a geo.intersects filter (separated with the word 'and' - must be lowercase).
+            </p>
+            <p>
+                geo.intersects(geoPoint, geography'POLYGON((-0.1431 51.5240, -0.0970 51.5240, -0.0942 51.4974, -0.1442 51.4973, -0.1431 51.5240))')
+                <b>and</b> geo.distance(geoPoint, geography'POINT(-0.09 51.52)') le 1
+            </p>
+            <p>
+                Please enjoy this demo, and maybe next time you are in London take a nursery-rhyme inspired walking tour of 'the city'!
+            </p>
+            <p>
+                <b>Nothing*</b> You can have many filter clauses but not an infinite number.
+            </p>
+        </div>
+        <div class="col-lg-4 col-lg-offset-1 col-sm-6">
+            <div class="col-xs-12" style="height:50px;"></div>
+            <img class="img-responsive" src="~/images/OrangesAndLemons.jpg" alt="">
         </div>
     </div>
 </div>

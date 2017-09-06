@@ -45,7 +45,7 @@
                 </span>
             </div>
             <br />
-            <div style="width:100%; height:500px;">
+            <div style="width:100%; height:470px;">
                 <div id='myMap'></div>
             </div>
         </div>
@@ -64,6 +64,14 @@
             {
 
             <script>
+
+                // Page global variables
+                var gFilterMap;
+                var gDrawingManager;
+                var gGeoPoints;
+                var gMapRefreshCount;
+
+                var svgTemplate = '<svg xmlns="http://www.w3.org/2000/svg" width="40px" height="40px"><path fill="#f29100" transform="scale(0.08)" d="M242.816,0C148.699,0,72.396,76.303,72.396,170.419c0,7.205,0.578,14.227,1.459,21.188  C88.417,324.727,231.75,478.153,231.75,478.153c2.554,2.858,5.016,4.621,7.387,5.897l0.122,0.061l4.773,1.52l4.773-1.52 l0.122-0.061c2.371-1.277,4.834-3.131,7.387-5.897c0,0,141.266-153.7,155.493-286.849c0.851-6.87,1.429-13.832,1.429-20.915 C413.205,76.303,336.933,0,242.816,0z " /><circle cx="20" cy="14" r="10" fill="#FFFFFF"/><text x="20" y="18" fill="{color}" text-anchor="middle">{text}</text></svg>';
 
                 // Initialise the page (Maps not ready yet)
                 $('document').ready(function () {
@@ -88,6 +96,11 @@
                 // Ask the Web API to perform a search for us
                 function Search() {
 
+                    // Not searching and drawing at the same time...
+                    if (gDrawingManager != null) {
+                        gDrawingManager.setDrawingMode(Microsoft.Maps.DrawingTools.DrawingMode.none);
+                    }
+
                     var searchParameters = {};
                     searchParameters.queryText = $("#queryText").val();
                     searchParameters.filterText = $("#filterText").val();
@@ -110,6 +123,9 @@
                         }
                         else {
                             Display(sr.verses);
+                            PopulateGeoPoints(sr.verses);
+                            gMapRefreshCount = 0;
+                            RefreshMap();
                         }
                     };
 
@@ -131,9 +147,12 @@
                 }
 
                 function Display(verses) {
-                    filterMap.entities.clear();
-                    if (verses != null && verses.length > 0)
+                    if (verses != null)
                     {
+                        // verses length can be 0. That's fine we shouldn't show anything
+                        if (verses.length < 1) {
+                            ErrorMessage("No verses found, get rid of search criteria or broaden geo filter");
+                        }
                         var html = '';
                         html += '<table class="table table-condensed table-striped">';
                         html += '<tbody>';
@@ -148,46 +167,85 @@
                                 html += verse.text;
                             }
                             html += '</td></tr>';
-                            AddPushPin(verse);
                         }
                         html += '</tbody></table>';
                         $("#results").html(html);
                     }
                 }
 
-                function AddPushPin(verse) {
+                function PopulateGeoPoints(verses) {
+                    gGeoPoints = new Array();
+                    for (i = 0; i < verses.length; i++) {
+                        var geoPoint = {
+                            latitude: verses[i].geoPoint.latitude,
+                            longitude: verses[i].geoPoint.longitude,
+                            churchName: verses[i].churchName,
+                            documentId: verses[i].documentId
+                        };
+                        gGeoPoints.push(geoPoint);
+                    }
+                }
+
+                function RefreshMap() {
+                    if (gFilterMap == null || gFilterMap.entities == null) {
+                        // Map not ready, retry
+                        if (gMapRefreshCount > 10) {
+                            // Something wrong: report
+                            ErrorMessage("Too many retries on refresh map - try refreshing the page");
+                            return;
+                        }
+                        gMapRefreshCount++;
+                        // Try again in .5 secs
+                        setTimeout(function () { RefreshMap(); }, 500);
+                        return;
+                    }
+                    else {
+                        // Map Ready
+                        if (gGeoPoints == null) {
+                            ErrorMessage("Trying to refresh map but no geoPoints defined");
+                            return;
+                        }
+                        else {
+                            gFilterMap.entities.clear();
+                            for (var i = 0; i < gGeoPoints.length; i++) {
+                                AddPushPin(gGeoPoints[i]);
+                            }
+                        }
+
+                    }
+                }
+
+                function AddPushPin(geoPoint) {
+                    var isOdd = geoPoint.documentId % 2;
                     var pushpin = new Microsoft.Maps.Pushpin(
-                        new Microsoft.Maps.Location(verse.geoPoint.latitude, verse.geoPoint.longitude),
+                        new Microsoft.Maps.Location(geoPoint.latitude, geoPoint.longitude),
                         {
-                            //title: verse.pointName,
-                            text: verse.documentId
+                            title: geoPoint.churchName,
+                            text: geoPoint.documentId,
+                            iconText: geoPoint.documentId,
+                            color: isOdd ? 'darkorange' : 'gold'
                         });
-                    Microsoft.Maps.Events.addHandler(pushpin, 'mouseover', function (e) {
-                        var verseId = 'verse-' + e.target.entity.iconText;
-                        $('#' + verseId).addClass('highlight').siblings().removeClass('highlight');
-                    });
-                    Microsoft.Maps.Events.addHandler(pushpin, 'mouseout', function (e) {
-                        var verseId = 'verse-' + e.target.entity.iconText;
-                        $('#' + verseId).removeClass('highlight');
-                    });
-                    filterMap.entities.push(pushpin);
+                    Microsoft.Maps.Events.addHandler(pushpin, 'mouseover', MouseOverChurchPin);
+                    Microsoft.Maps.Events.addHandler(pushpin, 'mouseout', MouseOutChurchPin);
+                    gFilterMap.entities.push(pushpin);
                 }               
 
-            </script>
+                function MouseOverChurchPin(e) {
+                    var verseId = 'verse-' + e.target.entity.iconText;
+                    $('#' + verseId).addClass('highlight').siblings().removeClass('highlight');
+                }
 
-            <script>
+                function MouseOutChurchPin(e) {
+                    var verseId = 'verse-' + e.target.entity.iconText;
+                    $('#' + verseId).removeClass('highlight');
+                }
 
-        // Crazy Bing Maps code that I plan to tidy up later when I know what I'm doing
-        // It works but if you value your sanity, just ignore it...
-
-        // Page global variables
-        var filterMap;
-        var geoPoints;
-        var drawingManager;
+        // Bing Maps code that I plan to tidy up later when I know what I'm doing
+        // (need to move from V7 'entities' to V8 'layers' paradigm)
 
         // Called async once Bing Maps is loaded on the page
         function loadMapScenario() {
-            filterMap = new Microsoft.Maps.Map(document.getElementById('myMap'), {
+            gFilterMap = new Microsoft.Maps.Map(document.getElementById('myMap'), {
                 // TODO: Use your Bing Maps Credential Here
                 credentials: 'AnjwY5Xqucct1HbKs82fHV_WI-FI2zKy4Z82wA0OBOUkEm-7MZ1NSCySNEikvhUJ',
                 center: new Microsoft.Maps.Location(51.516, -0.0865),
@@ -195,37 +253,15 @@
                 zoom: 13, enableClickableLogo: false, showCopyright: false
             });
 
-                if (geoPoints != null) {
-                    filterMap.entities.clear();
-                    for (var i = 0; i < geoPoints.length; i++) {
-                        var pushpin = new Microsoft.Maps.Pushpin(
-                            new Microsoft.Maps.Location(geoPoints[i].latitude, geoPoints[i].longitude),
-                            {
-                                //title: geoPoints[i].pointName,
-                                text: geoPoints[i].id
-                            });
-                        geoPoints[i].pushpin = pushpin;
-                        Microsoft.Maps.Events.addHandler(pushpin, 'mouseover', function (e) {
-                            var verseId = 'verse-' + e.target.entity.iconText;
-                            $('#' + verseId).addClass('highlight').siblings().removeClass('highlight');
-                        });
-                        Microsoft.Maps.Events.addHandler(pushpin, 'mouseout', function (e) {
-                            var verseId = 'verse-' + e.target.entity.iconText;
-                            $('#' + verseId).removeClass('highlight');
-                        });
-                        filterMap.entities.push(pushpin);
-                    }
-                }
-
             //Load the DrawingTools module
             Microsoft.Maps.loadModule('Microsoft.Maps.DrawingTools', function () {
                 //Create an instance of the DrawingTools class and bind it to the map.
-                var tools = new Microsoft.Maps.DrawingTools(filterMap);
+                var tools = new Microsoft.Maps.DrawingTools(gFilterMap);
 
                 //Show the drawing toolbar and enable editing on the map.
                 tools.showDrawingManager(function (manager) {
                     //Store a reference to the drawing manager as it will be useful later.
-                    drawingManager = manager;
+                    gDrawingManager = manager;
                     //Add events to the drawing manager.
                     Microsoft.Maps.Events.addHandler(manager, 'drawingChanged', function (e) {
                         mapDrawingChanged(e);
@@ -255,13 +291,13 @@
 
         function mapDrawingEnded() {
             var mfText = document.getElementById('filterText');
-            drawnShapes = drawingManager.getPrimitives();
+            drawnShapes = gDrawingManager.getPrimitives();
             var numShapes = drawnShapes.length;
             var mostRecent = drawnShapes[numShapes - 1];
             if (mostRecent != null) {
                 var isPoly = mostRecent instanceof Microsoft.Maps.Polygon;
                 var isPoint = mostRecent instanceof Microsoft.Maps.Pushpin;
-                mfText.value = "";
+                mfText.value = ""; // So if we draw something that's not a poly or point, filter is blank
                 if (isPoly) {
                     var vertices = mostRecent.getLocations();
                     mfText.value = "geo.intersects(geoPoint, geography'";
@@ -280,9 +316,9 @@
                     mfText.value += ")";
                     mfText.value += "') le 1";
                 }
-                // Get rid of any previous shapes
-                for (i = 0; i < drawnShapes.length; i++) {
-                    var theShape = drawnShapes[i];
+                // Get rid of the previous drawn shapes
+                for (var i = drawnShapes.length - 2; i >= 0; i--) {
+                        gDrawingManager.removeAt(i);
                 }
             }
         }

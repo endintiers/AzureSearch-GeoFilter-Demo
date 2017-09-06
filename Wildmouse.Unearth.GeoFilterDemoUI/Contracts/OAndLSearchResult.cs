@@ -8,6 +8,6 @@ namespace Wildmouse.Unearth.GeoFilterDemoUI.Contracts
     public class OAndLSearchResult
     {
         public string Msg { get; set; }
-        public List<OandLDocument> Verses { get; set; }
+        public List<OandLDocumentResult> Verses { get; set; }
     }
 }

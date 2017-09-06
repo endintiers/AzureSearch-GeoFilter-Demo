@@ -37,7 +37,7 @@ namespace Wildmouse.Unearth.GeoFilterDemoUI.Helpers
         {
             OAndLSearchResult result = new OAndLSearchResult()
             {
-                Verses = new List<OandLDocument>()
+                Verses = new List<OandLDocumentResult>()
             };
 
             try
@@ -53,9 +53,9 @@ namespace Wildmouse.Unearth.GeoFilterDemoUI.Helpers
             return result;
         }
 
-        private static List<OandLDocument> SearchFiltered(string query, string geoFilter)
+        private static List<OandLDocumentResult> SearchFiltered(string query, string geoFilter)
         {
-            var result = new List<OandLDocument>();
+            var result = new List<OandLDocumentResult>();
             SearchParameters sp = new SearchParameters()
             {
                 QueryType = QueryType.Full,
@@ -63,9 +63,11 @@ namespace Wildmouse.Unearth.GeoFilterDemoUI.Helpers
                 HighlightFields = new List<string> { "text" },
                 HighlightPreTag = "<mark><b><i>",
                 HighlightPostTag = "</i></b></mark>",
-                Filter = geoFilter,
                 Top = 1000
             };
+
+            // Inserting filter
+            sp.Filter = geoFilter;
 
             // Do a search
             var dsr = _searchIndexClient.Documents.Search(query, sp);
@@ -75,7 +77,7 @@ namespace Wildmouse.Unearth.GeoFilterDemoUI.Helpers
             {
                 foreach (var sr in dsr.Results)
                 {
-                    var doc = new OandLDocument();
+                    var doc = new OandLDocumentResult();
                     doc.documentId = (string)sr.Document["documentId"];
                     doc.churchName = (string) sr.Document["churchName"];
                     doc.geoPoint = (GeographyPoint)sr.Document["geoPoint"];
