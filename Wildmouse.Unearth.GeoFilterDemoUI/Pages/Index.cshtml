@@ -177,6 +177,7 @@
                     gGeoPoints = new Array();
                     for (i = 0; i < verses.length; i++) {
                         var geoPoint = {
+                            position: i,
                             latitude: verses[i].geoPoint.latitude,
                             longitude: verses[i].geoPoint.longitude,
                             churchName: verses[i].churchName,
@@ -216,14 +217,14 @@
                 }
 
                 function AddPushPin(geoPoint) {
-                    var isOdd = geoPoint.documentId % 2;
+                    var isOdd = geoPoint.position % 2;
                     var pushpin = new Microsoft.Maps.Pushpin(
                         new Microsoft.Maps.Location(geoPoint.latitude, geoPoint.longitude),
                         {
                             title: geoPoint.churchName,
                             text: geoPoint.documentId,
                             iconText: geoPoint.documentId,
-                            color: isOdd ? 'darkorange' : 'gold'
+                            color: isOdd ? 'gold' : 'darkorange'
                         });
                     Microsoft.Maps.Events.addHandler(pushpin, 'mouseover', MouseOverChurchPin);
                     Microsoft.Maps.Events.addHandler(pushpin, 'mouseout', MouseOutChurchPin);
